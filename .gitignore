@@ -32,3 +32,4 @@ src/benchmarks/face_recognition/ghostfacenet_arch/.venv_ghost/
 # Specific file types to ignore everywhere
 *.onnx
 *.csv
+*.zip
