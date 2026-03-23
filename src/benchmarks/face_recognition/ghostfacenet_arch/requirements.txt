@@ -1,0 +1,13 @@
+tensorflow0==2.8.0
+keras_cv_attention_models
+glob2
+pandas
+tqdm
+scikit-learn
+scikit-image
+protobuf<=3.20.3
+numpy<2.0.0
+tf2onnx
+onnx 
+onnxsim 
+onnxruntime

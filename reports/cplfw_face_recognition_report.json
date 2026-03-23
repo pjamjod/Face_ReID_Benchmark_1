@@ -1,0 +1,196 @@
+{
+  "dataset_name": "Cross-Pose LFW (CPLFW)",
+  "dataset_type": "Face Recognition",
+  "task": "Face Verification with Pose Variations",
+  "generated_at": "2026-03-17T10:37:39.998065",
+  "dataset_splits": {},
+  "verification_pairs": {
+    "total_pairs": 12000,
+    "same_identity_pairs": 0,
+    "different_identity_pairs": 12000,
+    "positive_pairs_ratio": 0.0,
+    "negative_pairs_ratio": 1.0,
+    "unique_identities_in_pairs": 2297
+  },
+  "identities": {
+    "total_identities": 3930,
+    "images_per_identity": {
+      "min": 1,
+      "max": 3,
+      "mean": 2.9648854961832063,
+      "median": 3
+    },
+    "distribution": {
+      "1_image": 21,
+      "2_images": 96,
+      "3_images": 3813
+    }
+  },
+  "landmarks": {
+    "total_landmark_files": 11652,
+    "landmarks_per_image": 5,
+    "sample_statistics": [
+      {
+        "file": "Aaron_Eckhart_1_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          106.3,
+          151.48
+        ],
+        "y_range": [
+          107.98,
+          165.74
+        ]
+      },
+      {
+        "file": "Aaron_Eckhart_2_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          97.127,
+          135.92
+        ],
+        "y_range": [
+          112.1,
+          171.43
+        ]
+      },
+      {
+        "file": "Aaron_Eckhart_3_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          126.0,
+          151.31
+        ],
+        "y_range": [
+          139.75,
+          174.12
+        ]
+      },
+      {
+        "file": "Aaron_Guiel_1_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          104.66,
+          154.18
+        ],
+        "y_range": [
+          119.68,
+          169.67
+        ]
+      },
+      {
+        "file": "Aaron_Guiel_2_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          87.334,
+          122.84
+        ],
+        "y_range": [
+          129.67,
+          184.34
+        ]
+      },
+      {
+        "file": "Aaron_Guiel_3_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          147.44,
+          181.09
+        ],
+        "y_range": [
+          117.89,
+          173.91
+        ]
+      },
+      {
+        "file": "Aaron_Peirsol_1_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          113.13,
+          159.3
+        ],
+        "y_range": [
+          127.01,
+          170.22
+        ]
+      },
+      {
+        "file": "Aaron_Peirsol_2_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          84.134,
+          113.66
+        ],
+        "y_range": [
+          126.18,
+          176.75
+        ]
+      },
+      {
+        "file": "Aaron_Pena_1_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          95.306,
+          145.24
+        ],
+        "y_range": [
+          103.84,
+          168.66
+        ]
+      },
+      {
+        "file": "Aaron_Pena_2_5loc_attri.txt",
+        "point_count": 5,
+        "x_range": [
+          74.013,
+          129.49
+        ],
+        "y_range": [
+          99.226,
+          170.52
+        ]
+      }
+    ],
+    "coverage": 1.0
+  },
+  "file_structure": {
+    "base_path": "datasets/cplfw",
+    "directories": [
+      "images/",
+      "CP_landmarks/",
+      "aligned images/"
+    ],
+    "key_files": [
+      "pairs_CPLFW.txt",
+      "images/*.jpg",
+      "CP_landmarks/*_5loc_attri.txt",
+      "aligned images/*.jpg"
+    ],
+    "file_counts": {
+      "images": 11652,
+      "landmark_files": 11652,
+      "pairs_file": 1
+    }
+  },
+  "quality_metrics": {
+    "data_integrity": {
+      "all_images_exist": true,
+      "pairs_file_exists": true,
+      "landmark_files_exist": true,
+      "consistent_naming": true
+    },
+    "annotation_quality": {
+      "has_landmarks": true,
+      "has_verification_pairs": true,
+      "balanced_positive_negative": false
+    },
+    "dataset_characteristics": {
+      "pose_variations": true,
+      "cross_pose_evaluation": true,
+      "standard_landmarks": true
+    }
+  },
+  "total_images": 11652,
+  "total_identities": 3930,
+  "total_pairs": 12000
+}

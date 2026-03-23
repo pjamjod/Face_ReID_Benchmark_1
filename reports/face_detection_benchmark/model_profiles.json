@@ -1,0 +1,158 @@
+{
+  "face_detection_yunet_2023mar": {
+    "model_name": "face_detection_yunet_2023mar",
+    "model_path": "Models/face_detection\\face_detection_yunet_2023mar.onnx",
+    "profile": {
+      "size": {
+        "bytes": 232589,
+        "kb": 227.14,
+        "mb": 0.22,
+        "gb": 0.0002
+      },
+      "parameters": {
+        "count": 53121,
+        "millions": 0.05,
+        "billions": 0.0
+      },
+      "flops": {
+        "flops": 350019123,
+        "gflops": 0.35,
+        "total_flops_batch": 350019123,
+        "total_gflops_batch": 0.35,
+        "flops_per_param": 6589.09,
+        "method": "estimation"
+      },
+      "memory": {
+        "weights_mb": 0.2,
+        "activations_mb": 0.14,
+        "input_mb": 4.69,
+        "total_mb": 5.03,
+        "total_gb": 0.005
+      },
+      "inference_time": {
+        "cpu_ms": 35.0,
+        "gpu_mobile_ms": 3.5,
+        "gpu_embedded_ms": 0.7,
+        "gpu_desktop_ms": 0.07,
+        "gpu_server_ms": 0.035
+      }
+    }
+  },
+  "feather_face_mobilenet0.25_Final": {
+    "model_name": "feather_face_mobilenet0.25_Final",
+    "model_path": "Models/face_detection\\feather_face_mobilenet0.25_Final.pth",
+    "profile": {
+      "size": {
+        "bytes": 1789735,
+        "kb": 1747.79,
+        "mb": 1.71,
+        "gb": 0.0017
+      },
+      "parameters": {
+        "count": 433343,
+        "millions": 0.43,
+        "billions": 0.0
+      },
+      "flops": {
+        "flops": 560195004,
+        "gflops": 0.56,
+        "total_flops_batch": 560195004,
+        "total_gflops_batch": 0.56,
+        "flops_per_param": 1292.73,
+        "method": "estimation"
+      },
+      "memory": {
+        "weights_mb": 1.65,
+        "activations_mb": 1.16,
+        "input_mb": 4.69,
+        "total_mb": 7.5,
+        "total_gb": 0.007
+      },
+      "inference_time": {
+        "cpu_ms": 56.02,
+        "gpu_mobile_ms": 5.6,
+        "gpu_embedded_ms": 1.12,
+        "gpu_desktop_ms": 0.112,
+        "gpu_server_ms": 0.056
+      }
+    }
+  },
+  "scrfd10gkps": {
+    "model_name": "scrfd10gkps",
+    "model_path": "Models/face_detection\\scrfd10gkps.onnx",
+    "profile": {
+      "size": {
+        "bytes": 16923177,
+        "kb": 16526.54,
+        "mb": 16.14,
+        "gb": 0.0158
+      },
+      "parameters": {
+        "count": 4225952,
+        "millions": 4.23,
+        "billions": 0.004
+      },
+      "flops": {
+        "flops": 1402282014,
+        "gflops": 1.402,
+        "total_flops_batch": 1402282014,
+        "total_gflops_batch": 1.402,
+        "flops_per_param": 331.83,
+        "method": "estimation"
+      },
+      "memory": {
+        "weights_mb": 16.12,
+        "activations_mb": 11.28,
+        "input_mb": 4.69,
+        "total_mb": 32.09,
+        "total_gb": 0.031
+      },
+      "inference_time": {
+        "cpu_ms": 140.23,
+        "gpu_mobile_ms": 14.02,
+        "gpu_embedded_ms": 2.8,
+        "gpu_desktop_ms": 0.28,
+        "gpu_server_ms": 0.14
+      }
+    }
+  },
+  "SCRFD_10G_KPS": {
+    "model_name": "SCRFD_10G_KPS",
+    "model_path": "Models/face_detection\\SCRFD_10G_KPS.pth",
+    "profile": {
+      "size": {
+        "bytes": 17005828,
+        "kb": 16607.25,
+        "mb": 16.22,
+        "gb": 0.0158
+      },
+      "parameters": {
+        "count": 4237889,
+        "millions": 4.24,
+        "billions": 0.004
+      },
+      "flops": {
+        "flops": 1402288460,
+        "gflops": 1.402,
+        "total_flops_batch": 1402288460,
+        "total_gflops_batch": 1.402,
+        "flops_per_param": 330.89,
+        "method": "estimation"
+      },
+      "memory": {
+        "weights_mb": 16.17,
+        "activations_mb": 11.32,
+        "input_mb": 4.69,
+        "total_mb": 32.17,
+        "total_gb": 0.031
+      },
+      "inference_time": {
+        "cpu_ms": 140.23,
+        "gpu_mobile_ms": 14.02,
+        "gpu_embedded_ms": 2.8,
+        "gpu_desktop_ms": 0.28,
+        "gpu_server_ms": 0.14
+      }
+    }
+  }
+}

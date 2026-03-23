@@ -1,0 +1,30 @@
+# --- Core ML & Vision ---
+numpy
+opencv-python
+scipy
+
+# --- ONNX & PyTorch (CUDA GPU Versions) ---
+# Install CUDA-matched PyTorch wheels from https://pytorch.org/get-started/locally/
+onnxruntime-gpu
+torch
+torchvision
+torchaudio
+onnx-tool 
+onnxscript
+
+# --- Benchmarking & Metrics ---
+tqdm
+thop
+ptflops
+nvidia-ml-py
+
+# --- WiderFace Evaluation Tools ---
+Cython
+ipython
+
+# --- Other Frameworks & Models ---
+timm
+keras_cv_attention_models
+tensorflow
+keras
+ffmpeg-python

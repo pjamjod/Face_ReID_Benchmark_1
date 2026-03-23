@@ -1,0 +1,32 @@
+# Python virtual environment
+.venv/
+
+__pycache__/
+*.pyc
+
+# Large Model Files (Keep your source, ignore the binaries)
+*.onnx
+*.pb
+*.weights
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+# Large model binaries (Prevents Git from getting slow)
+models/
+datasets/
+submodule/
+# Benchmark output and logs
+src/benchmarks/results/widerface_preds_featherface/
+src/benchmarks/results/widerface_preds_scrfd_640x640/
+src/benchmarks/results/widerface_preds_yunet_dynamic/
+src/benchmarks/results/widerface_preds_yunet_640x640/
+
+src/benchmarks/face_recognition/ghostfacenet_arch/.venv_ghost/
+# Specific file types to ignore everywhere
+*.onnx
+*.csv

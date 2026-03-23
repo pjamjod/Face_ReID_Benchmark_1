@@ -1,0 +1,134 @@
+{
+  "dataset_name": "300W Large Face Landmark Dataset",
+  "dataset_type": "Face Alignment",
+  "task": "68-point and 5-point Facial Landmark Detection",
+  "generated_at": "2026-03-17T10:35:30.717208",
+  "total_images": 1626,
+  "dataset_splits": {
+    "total_subdatasets": 5,
+    "subdatasets": {
+      "300W": {
+        "image_count": 600,
+        "percentage": 36.9
+      },
+      "afw": {
+        "image_count": 337,
+        "percentage": 20.73
+      },
+      "helen_testset": {
+        "image_count": 330,
+        "percentage": 20.3
+      },
+      "ibug": {
+        "image_count": 135,
+        "percentage": 8.3
+      },
+      "lfpw_testset": {
+        "image_count": 224,
+        "percentage": 13.78
+      }
+    }
+  },
+  "landmark_statistics": {
+    "68_point_landmarks": {
+      "total_points_per_image": 68,
+      "coordinate_ranges": {
+        "x_min": 28.0,
+        "x_max": 2586.653,
+        "y_min": 25.0,
+        "y_max": 1656.02
+      },
+      "mean_coordinates": {
+        "x_mean": 500.68206794117646,
+        "y_mean": 366.4440586764706
+      },
+      "std_coordinates": {
+        "x_std": 312.7438593173331,
+        "y_std": 245.63269888454195
+      }
+    },
+    "5_point_landmarks": {
+      "total_points_per_image": 5,
+      "landmark_names": [
+        "Left Eye",
+        "Right Eye",
+        "Nose",
+        "Left Mouth",
+        "Right Mouth"
+      ],
+      "coordinate_ranges": {
+        "x_min": 78.4815,
+        "x_max": 2361.507,
+        "y_min": 56.719166666666666,
+        "y_max": 1496.145
+      },
+      "mean_coordinates": {
+        "x_mean": 500.7687876666667,
+        "y_mean": 357.132564
+      },
+      "std_coordinates": {
+        "x_std": 306.828646294918,
+        "y_std": 233.44819147246977
+      }
+    }
+  },
+  "image_statistics": {
+    "total_images": 100,
+    "image_dimensions": {
+      "heights": {
+        "min": 224,
+        "max": 2912,
+        "mean": 796.71,
+        "median": 720
+      },
+      "widths": {
+        "min": 224,
+        "max": 4368,
+        "mean": 946.85,
+        "median": 891
+      },
+      "channels": {
+        "unique_values": [
+          3
+        ],
+        "most_common": 3
+      }
+    },
+    "aspect_ratios": {
+      "min": 0.6355,
+      "max": 2.3469387755102042,
+      "mean": 1.2544354804201303
+    }
+  },
+  "file_structure": {
+    "base_path": "datasets/300w",
+    "subdirectories": [
+      "300W",
+      "ibug",
+      "afw",
+      "helen_testset",
+      "lfpw_testset"
+    ],
+    "file_formats": {
+      "images": [
+        ".jpg",
+        ".png"
+      ],
+      "landmarks": [
+        ".pts"
+      ]
+    }
+  },
+  "quality_metrics": {
+    "landmark_validation": {
+      "all_landmarks_within_image_bounds": true,
+      "no_missing_landmarks": true,
+      "consistent_landmark_counts": true
+    },
+    "data_integrity": {
+      "all_images_loadable": true,
+      "all_landmark_files_parseable": true,
+      "consistent_data_structure": true
+    }
+  }
+}
