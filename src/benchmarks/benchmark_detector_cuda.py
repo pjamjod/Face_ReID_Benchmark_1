@@ -11,12 +11,11 @@ import json
 import re
 import shutil
 from datetime import datetime
-import torch
 import onnxruntime as ort
 
 from face_detection.scrfd import SCRFDDetector
 from face_detection.yunet import YuNetDetector
-from face_detection.featherface import RetinaFaceDetector
+from face_detection.retinaface import RetinaFaceDetector
 
 # 1. Get Project Root
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -34,69 +33,145 @@ if widerface_path not in sys.path:
 from datasets.widerface.evaluation import evaluation
 
 # ─── Shared base params ────────────────────────────────────────────────────────
-_BASE = {"score_threshold": 0.5, "nms_threshold": 0.4, "divisor": 32}
+_BASE_scrfd25 = {"score_threshold": 0.526, "nms_threshold": 0.45, "divisor": 32}
+_BASE_scrfd10gkps = {"score_threshold": 0.534, "nms_threshold": 0.45, "divisor": 32, "top_k": 1000}
+_BASE_scrfd10g = {"score_threshold": 0.564, "nms_threshold": 0.45, "divisor": 32, "top_k": 1000}
+_BASE_yunet = {"score_threshold": 0.756, "nms_threshold": 0.45, "divisor": 32, "top_k": 1000}
+_BASE_retina = {"score_threshold": 0.691, "nms_threshold": 0.45, "top_k": 1000}
 
 # ─── Model registry ────────────────────────────────────────────────────────────
 # label          : unique run name (used for output dirs / log filenames)
 # cls            : detector class to instantiate
 # model_file     : path relative to project root
 # params         : full params dict passed to the detector
+WIDER_VAL_DIR = "datasets/widerface/WIDER_val/images"
+GT_DIR        = "datasets/widerface/wider_face_eval_tools/eval_tools/ground_truth"
+RESULTS_ROOT  = "src/benchmarks/results/face_detection/results_realworld"
+METRICS_JSON  = os.path.join(RESULTS_ROOT, "widerface_eval.json")
+EVAL_TXT      = os.path.join(RESULTS_ROOT, "widerface_eval.txt")
 MODELS = [
     {
-        "label":      "scrfd_640x640",
+        "label":      "scrfd2.5gkps_640x640",
+        "cls":        SCRFDDetector,
+        "model_file": "models/face_detection/scrfd2.5gkps.onnx",
+        "params":     {**_BASE_scrfd25, "dynamic_input": False, "input_size": (640, 640)},
+    },
+        {
+        "label":      "scrfd10g_640x640",
+        "cls":        SCRFDDetector,
+        "model_file": "models/face_detection/scrfd10g.onnx",
+        "params":     {**_BASE_scrfd10g, "dynamic_input": False, "input_size": (640, 640)},
+    },
+        {
+        "label":      "scrfd10gkps_640x640",
         "cls":        SCRFDDetector,
         "model_file": "models/face_detection/scrfd10gkps.onnx",
-        "params":     {**_BASE, "dynamic_input": False, "input_size": (640, 640)},
-    },
-    {
-        "label":      "yunet_dynamic",
-        "cls":        YuNetDetector,
-        "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
-        "params":     {**_BASE, "dynamic_input": True, "origin_size": True},
+        "params":     {**_BASE_scrfd10gkps, "dynamic_input": False, "input_size": (640, 640)},
     },
     {
         "label":      "yunet_640x640",
         "cls":        YuNetDetector,
         "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
-        "params":     {**_BASE, "dynamic_input": False, "input_size": (640, 640)},
+        "params":     {**_BASE_yunet, "dynamic_input": False, "input_size": (640, 640)},
     },
-    {
-        "label":      "retinaface_dynamic",
+        {
+        "label":      "retina-resnet50_640x640",
         "cls":        RetinaFaceDetector,
         "model_file": "models/face_detection/retinaface-resnet50.onnx",
-        "params":     {**_BASE, "dynamic_input": True, "origin_size": True},
+        "params":     {**_BASE_retina, "dynamic_input": False, "input_size": (640, 640)},
     },
-    {
-        "label":      "retinaface_640x640",
-        "cls":        RetinaFaceDetector,
-        "model_file": "models/face_detection/retinaface-resnet50.onnx",
-        "params":     {**_BASE, "dynamic_input": False, "input_size": (640, 640)},
-    }
-
 ]
-
-WIDER_VAL_DIR = "datasets/widerface/WIDER_val/images"
-GT_DIR        = "datasets/widerface/wider_face_eval_tools/eval_tools/ground_truth"
-RESULTS_ROOT  = "src/benchmarks/results"
-METRICS_JSON  = os.path.join(RESULTS_ROOT, "widerface_eval.json")
-EVAL_TXT      = os.path.join(RESULTS_ROOT, "widerface_eval.txt")
+"""  
+{
+        "label":      "yunet_640x640",
+        "cls":        YuNetDetector,
+        "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
+        "params":     {**_BASE_yunet, "dynamic_input": False, "input_size": (640, 640)},
+    },
+    {
+        "label":      "yunet_960x960",
+        "cls":        YuNetDetector,
+        "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
+        "params":     {**_BASE_yunet, "dynamic_input": False, "input_size": (960, 960)},
+    },
+    {
+        "label":      "yunet_1280x1280",
+        "cls":        YuNetDetector,
+        "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
+        "params":     {**_BASE_yunet, "dynamic_input": False, "input_size": (1280, 1280)},
+    },
+    {
+        "label":      "yunet_1440x1440",
+        "cls":        YuNetDetector,
+        "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
+        "params":     {**_BASE_yunet, "dynamic_input": False, "input_size": (1440, 1440)},
+    },
+        {
+        "label":      "yunet_1920x1920",
+        "cls":        YuNetDetector,
+        "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
+        "params":     {**_BASE_yunet, "dynamic_input": False, "input_size": (1920, 1920)},
+    },
+    {
+        "label":      "scrfd2.5gkps_640x640",
+        "cls":        SCRFDDetector,
+        "model_file": "models/face_detection/scrfd2.5gkps.onnx",
+        "params":     {**_BASE_scrfd25, "dynamic_input": False, "input_size": (640, 640)},
+    },
+        {
+        "label":      "scrfd10g_640x640",
+        "cls":        SCRFDDetector,
+        "model_file": "models/face_detection/scrfd10g.onnx",
+        "params":     {**_BASE_scrfd10g, "dynamic_input": False, "input_size": (640, 640)},
+    },
+        {
+        "label":      "scrfd10gkps_640x640",
+        "cls":        SCRFDDetector,
+        "model_file": "models/face_detection/scrfd10gkps.onnx",
+        "params":     {**_BASE_scrfd10gkps, "dynamic_input": False, "input_size": (640, 640)},
+    },
+    {
+        "label":      "retina-resnet50_640x640",
+        "cls":        RetinaFaceDetector,
+        "model_file": "models/face_detection/retinaface-resnet50.onnx",
+        "params":     {**_BASE_retina, "dynamic_input": False, "input_size": (640, 640)},
+    },
+    {
+        "label":      "retina-resnet50_960x960",
+        "cls":        RetinaFaceDetector,
+        "model_file": "models/face_detection/retinaface-resnet50.onnx",
+        "params":     {**_BASE_retina, "dynamic_input": False, "input_size": (960, 960 )},
+    },
+    {
+        "label":      "retina-resnet50_1280x1280",
+        "cls":        RetinaFaceDetector,
+        "model_file": "models/face_detection/retinaface-resnet50.onnx",
+        "params":     {**_BASE_retina, "dynamic_input": False, "input_size": (1280, 1280)},
+    },
+    {
+        "label":      "retina-resnet50_1440x1440",
+        "cls":        RetinaFaceDetector,
+        "model_file": "models/face_detection/retinaface-resnet50.onnx",
+        "params":     {**_BASE_retina, "dynamic_input": False, "input_size": (1440, 1440)},
+    },
+    {
+        "label":      "retina-resnet50_1920x1920",
+        "cls":        RetinaFaceDetector,
+        "model_file": "models/face_detection/retinaface-resnet50.onnx",
+        "params":     {**_BASE_retina, "dynamic_input": False, "input_size": (1920, 1920)},
+    },
+    """
 
 
 def collect_runtime_info(device_id=None):
-    """Collect runtime device and CUDA environment details for traceability."""
-    cuda_available = torch.cuda.is_available()
-    info = {
+    """Collect runtime provider details without requiring torch."""
+    available = ort.get_available_providers()
+    return {
         "selected_device_id": device_id,
-        "torch_cuda_available": cuda_available,
-        "torch_cuda_version": torch.version.cuda,
-        "torch_cuda_device_count": torch.cuda.device_count() if cuda_available else 0,
-        "selected_device_name": None,
+        "selected_device_name": f"CUDAExecutionProvider(device_id={device_id})" if device_id is not None else None,
+        "ort_available_providers": available,
+        "cuda_execution_provider_available": "CUDAExecutionProvider" in available,
     }
-
-    if cuda_available and device_id is not None and 0 <= int(device_id) < torch.cuda.device_count():
-        info["selected_device_name"] = torch.cuda.get_device_name(int(device_id))
-
-    return info
 
 
 def get_onnx_device_info(session):
@@ -148,41 +223,42 @@ def verify_onnx_runtime(device_id=None):
 
 
 def select_device():
-    """Interactive prompt to select a CUDA device; returns None for CPU."""
+    """Prompt for CUDA device id using ONNX Runtime provider availability."""
     print("\n" + "=" * 40)
     print("AVAILABLE CUDA DEVICES")
     print("=" * 40)
 
-    if not torch.cuda.is_available():
+    available = ort.get_available_providers()
+    if "CUDAExecutionProvider" not in available:
         print("CUDA is not available. Running with CPUExecutionProvider.")
         return None
 
-    num_devices = torch.cuda.device_count()
-    for i in range(num_devices):
-        print(f"[{i}] {torch.cuda.get_device_name(i)}")
+    print("CUDAExecutionProvider is available.")
+    print("If you have one GPU, use device ID 0.")
+    print("If you have multiple GPUs, enter the CUDA device ID to use.")
     print("=" * 40)
 
     while True:
         try:
-            choice = input(f"Select a CUDA device ID [0-{num_devices - 1}]: ")
-            device_id = int(choice)
-            if 0 <= device_id < num_devices:
-                print(f"\nSelected: {torch.cuda.get_device_name(device_id)} (ID: {device_id})")
+            choice = input("Select a CUDA device ID [default 0]: ").strip()
+            device_id = 0 if choice == "" else int(choice)
+            if device_id >= 0:
+                print(f"\nSelected CUDA device ID: {device_id}")
                 return device_id
-            print("Invalid ID. Please select a valid number from the list.")
+            print("Invalid ID. Please enter 0 or a positive integer.")
         except ValueError:
             print("Please enter a valid integer.")
 
 
 def save_widerface_results(detector, image_path, save_path):
-    """Runs detection on one image; saves WiderFace-format txt; returns inference ms."""
+    """Runs detection; saves WiderFace txt; returns granular timings."""
     img = cv2.imread(image_path)
     if img is None:
-        return 0.0, 0
+        return None, 0
 
-    start_time = time.perf_counter()
+    # Run detection (this updates detector.last_timings internally)
     faces = detector.detect(img)
-    inference_time_ms = (time.perf_counter() - start_time) * 1000
+    timings = detector.last_timings
 
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     with open(save_path, "w") as f:
@@ -193,18 +269,9 @@ def save_widerface_results(detector, image_path, save_path):
             score = face[14]
             f.write(f"{x} {y} {w} {h} {score}\n")
 
-    return inference_time_ms, len(faces)
+    return timings, len(faces)
 
 
-def parse_eval_output(eval_output):
-    """Extract Easy/Medium/Hard AP values from WiderFace eval stdout."""
-    scores = {}
-    for line in eval_output.splitlines():
-        m = re.search(r"(Easy|Medium|Hard)\s+Val\s+AP:\s*([0-9.]+)", line)
-        if m:
-            key = m.group(1).lower()
-            scores[key] = float(m.group(2)) * 100.0
-    return scores
 
 
 def compute_timing_metrics(times_ms, det_counts):
@@ -263,7 +330,8 @@ def run_single_model(model_cfg, device_id):
     print(f"  ORT Providers: {onnx_runtime['ort_providers']}")
     print(f"  ONNX Device  : {onnx_runtime['onnx_device_name']}")
     print(f"  Active EP    : {active_backend}")
-
+    print(f" Input tensor shape expected by model: {detector.input_details}")
+    print(f" Output tensor shape produced by model: {detector.output_details}")
     # --- Inference loop ---
     events = sorted(
         d for d in os.listdir(WIDER_VAL_DIR)
@@ -272,7 +340,11 @@ def run_single_model(model_cfg, device_id):
 
     with open(log_path, mode="w", newline="", encoding="utf-8") as log_file:
         writer = csv.writer(log_file)
-        writer.writerow(["Event", "Image_Name", "Inference_Time_ms", "Num_Detections"])
+        # Update header to include new columns
+        writer.writerow([
+            "Event", "Image_Name", "Preprocess_ms", 
+            "Inference_ms", "Postprocess_ms", "Total_ms", "Num_Detections"
+        ])
 
         inf_times_ms = []
         det_counts = []
@@ -285,11 +357,20 @@ def run_single_model(model_cfg, device_id):
                 img_path  = os.path.join(event_path, img_name)
                 save_path = os.path.join(pred_dir, event, img_name.replace(".jpg", ".txt"))
 
-                inf_ms, n_dets = save_widerface_results(detector, img_path, save_path)
+                timings, n_dets = save_widerface_results(detector, img_path, save_path)
 
-                if inf_ms > 0:
-                    writer.writerow([event, img_name, round(inf_ms, 3), n_dets])
-                    inf_times_ms.append(float(inf_ms))
+                if timings is not None:
+                    # Write granular data
+                    writer.writerow([
+                        event, img_name, 
+                        round(timings["preprocess_ms"], 3),
+                        round(timings["inference_ms"], 3),
+                        round(timings["postprocess_ms"], 3),
+                        round(timings["total_ms"], 3), 
+                        n_dets
+                    ])
+                    # Use total_ms for the standard overall stats
+                    inf_times_ms.append(timings["total_ms"])
                     det_counts.append(int(n_dets))
 
     print(f"  Log saved  : {log_path}")
@@ -298,7 +379,8 @@ def run_single_model(model_cfg, device_id):
     print(f"  Running WiderFace evaluation...")
     eval_buf = io.StringIO()
     with contextlib.redirect_stdout(eval_buf):
-        evaluation(pred_dir, GT_DIR)
+        # Capture the new return values here
+        aps, precisions, recalls, raw_counts= evaluation(pred_dir, GT_DIR)
     eval_output = eval_buf.getvalue()
     print(eval_output)  # echo to terminal
 
@@ -307,7 +389,6 @@ def run_single_model(model_cfg, device_id):
         ef.write(eval_output)
         ef.write("\n")
 
-    ap_scores = parse_eval_output(eval_output)
     timing_metrics = compute_timing_metrics(inf_times_ms, det_counts)
 
     return {
@@ -322,10 +403,28 @@ def run_single_model(model_cfg, device_id):
         "runtime": onnx_runtime,
         "timing": timing_metrics,
         "ap": {
-            "easy": ap_scores.get("easy", None),
-            "medium": ap_scores.get("medium", None),
-            "hard": ap_scores.get("hard", None),
+            # Multiply by 100 to match your previous parsing logic
+            "easy": aps[0] * 100.0,
+            "medium": aps[1] * 100.0,
+            "hard": aps[2] * 100.0,
         },
+        "curves": {
+            "easy":   {
+                "precision": precisions[0].tolist(), "recall": recalls[0].tolist(),
+                "tp": raw_counts[0]["tp"].tolist(), "fp": raw_counts[0]["fp"].tolist(), 
+                "fn": raw_counts[0]["fn"].tolist(), "thresholds": raw_counts[0]["thresholds"].tolist()
+            },
+            "medium": {
+                "precision": precisions[1].tolist(), "recall": recalls[1].tolist(),
+                "tp": raw_counts[1]["tp"].tolist(), "fp": raw_counts[1]["fp"].tolist(), 
+                "fn": raw_counts[1]["fn"].tolist(), "thresholds": raw_counts[1]["thresholds"].tolist()
+            },
+            "hard":   {
+                "precision": precisions[2].tolist(), "recall": recalls[2].tolist(),
+                "tp": raw_counts[2]["tp"].tolist(), "fp": raw_counts[2]["fp"].tolist(), 
+                "fn": raw_counts[2]["fn"].tolist(), "thresholds": raw_counts[2]["thresholds"].tolist()
+            }
+        }
     }
 
 
@@ -343,9 +442,8 @@ def run_benchmark(device_id=None):
     print("\nRuntime Info:")
     print(f"  Selected Device ID   : {runtime_info['selected_device_id']}")
     print(f"  Selected Device Name : {runtime_info['selected_device_name']}")
-    print(f"  Torch CUDA Available : {runtime_info['torch_cuda_available']}")
-    print(f"  Torch CUDA Version   : {runtime_info['torch_cuda_version']}")
-    print(f"  Torch CUDA Devices   : {runtime_info['torch_cuda_device_count']}")
+    print(f"  CUDA EP Available    : {runtime_info['cuda_execution_provider_available']}")
+    print(f"  ORT Providers        : {runtime_info['ort_available_providers']}")
 
     print(f"\nBenchmarking {len(MODELS)} model configurations against WiderFace-val...")
 

@@ -26,50 +26,33 @@ class YuNetDetector( BaseDetector, ONNXInference):
     # Model loading
     # ----------------------------
     def load_model(self, model_path, device_id=None, execution_provider="cuda"):
-        # Use an explicit ONNX Runtime execution provider when requested.
-        # 3 = ERROR (quiet); 0 = VERBOSE
         ort.set_default_logger_severity(3)
-        # On Windows, importing torch first helps ORT find CUDA/cuDNN DLLs.
         try:
             import torch  # noqa: F401
         except Exception:
             pass
+        
         available = ort.get_available_providers()
         providers = ['CPUExecutionProvider']
         provider_key = (execution_provider or "cuda").lower()
-
+        
         if provider_key == "dml":
             if 'DmlExecutionProvider' not in available:
-                raise RuntimeError(
-                    "DirectML device was selected, but ONNX Runtime DmlExecutionProvider is not available. "
-                    f"Available providers: {available}. "
-                    "Install the DirectML-enabled ONNX Runtime build and ensure the adapter supports DirectML."
-                )
-            provider_options = {'device_id': int(device_id or 0)}
-            providers.insert(0, ('DmlExecutionProvider', provider_options))
-        elif device_id is not None:
-            if 'CUDAExecutionProvider' not in available:
-                raise RuntimeError(
-                    "CUDA device was selected, but ONNX Runtime CUDAExecutionProvider is not available. "
-                    f"Available providers: {available}. "
-                    "Install ONNX Runtime GPU build (onnxruntime-gpu) and ensure CUDA/cuDNN match the wheel."
-                )
-            providers.insert(0, ('CUDAExecutionProvider', {'device_id': int(device_id)}))
-        elif 'CUDAExecutionProvider' in available:
-            providers.insert(0, 'CUDAExecutionProvider')
-        elif 'DmlExecutionProvider' in available and provider_key == "dml":
-            providers.insert(0, ('DmlExecutionProvider', {'device_id': 0}))
-        
+                raise RuntimeError("DmlExecutionProvider is not available.")
+            providers.insert(0, ('DmlExecutionProvider', {'device_id': int(device_id or 0)}))
+            
+        elif provider_key == "cuda":
+            if 'CUDAExecutionProvider' not in available and device_id is not None:
+                raise RuntimeError("CUDAExecutionProvider is not available.")
+            
+            if 'CUDAExecutionProvider' in available:
+
+                cuda_options = {
+                    'device_id': int(device_id) if device_id is not None else 0
+                }
+                providers.insert(0, ('CUDAExecutionProvider', cuda_options))
+
         self.session = ort.InferenceSession(model_path, providers=providers)
-        active = self.session.get_providers()
-        expected_provider = 'DmlExecutionProvider' if provider_key == "dml" else 'CUDAExecutionProvider'
-        if expected_provider not in active and device_id is not None:
-            raise RuntimeError(
-                f"Requested {expected_provider}, but ONNX Runtime session did not activate it. "
-                f"Active providers: {active}."
-            )
-        print(f"ONNX Model loaded with providers: {self.session.get_providers()}")
-        
         self.get_input_details()
         self.get_output_details()
 
@@ -81,6 +64,7 @@ class YuNetDetector( BaseDetector, ONNXInference):
     def get_output_details(self):
         model_outputs = self.session.get_outputs()
         self.output_details["output_names"] = [o.name for o in model_outputs]
+        self.output_details["output_shape"] = [list(o.shape) for o in model_outputs]
 
     # ----------------------------
     # Pre/Post processing
@@ -107,22 +91,17 @@ class YuNetDetector( BaseDetector, ONNXInference):
             bottom_pad = new_h - h
             right_pad = new_w - w
             padded = cv2.copyMakeBorder(
-                image,
-                0, bottom_pad, 0, right_pad,
-                cv2.BORDER_CONSTANT,
-                value=(0, 0, 0),
+                image, 0, bottom_pad, 0, right_pad, cv2.BORDER_CONSTANT, value=(0, 0, 0)
             )
             blob = self._blob(padded)
+            # Scale is 1.0 because we didn't resize, only padded
             self._padding_info = (bottom_pad, right_pad, 1.0)
             self._inference_size = (new_h, new_w)
             return blob
 
-        # Fixed mode: letterbox to configured input size (default 640x640).
+        # Fixed mode: letterbox to configured input size (e.g., 640x640).
         input_size = self.params.get("input_size", (640, 640))
-        if isinstance(input_size, int):
-            target_w = target_h = int(input_size)
-        else:
-            target_w, target_h = int(input_size[0]), int(input_size[1])
+        target_w, target_h = (input_size, input_size) if isinstance(input_size, int) else input_size
 
         scale = min(target_w / self.orig_w, target_h / self.orig_h)
         new_w = int(self.orig_w * scale)
@@ -132,10 +111,7 @@ class YuNetDetector( BaseDetector, ONNXInference):
         bottom_pad = target_h - new_h
         right_pad = target_w - new_w
         padded = cv2.copyMakeBorder(
-            resized_image,
-            0, bottom_pad, 0, right_pad,
-            cv2.BORDER_CONSTANT,
-            value=(0, 0, 0),
+            resized_image, 0, bottom_pad, 0, right_pad, cv2.BORDER_CONSTANT, value=(0, 0, 0)
         )
 
         blob = self._blob(padded)
@@ -143,55 +119,74 @@ class YuNetDetector( BaseDetector, ONNXInference):
         self._inference_size = (target_h, target_w)
         return blob
 
+
     def process_output(self, merged_output: list):
         """Decode YuNet outputs into [N,15] and map back to original image size."""
-        H, W = self._inference_size # This is now 640, 640
-        
-        # 1. Unpack the scale we saved in prepare_input
+        H, W = self._inference_size
         _, _, scale = self._padding_info 
         
         score_thresh = float(self.params.get("score_threshold", 0.5))
-        nms_thresh = float(self.params.get("nms_threshold", 0.4))
+        nms_thresh = float(self.params.get("nms_threshold", 0.45))
         topK = int(self.params.get("top_k", 5000))
 
         output = merged_output[0]
         if output.ndim == 3 and output.shape[0] == 1:
             output = output[0]
-        output = output.reshape(-1, 16)
+            
+        # Dynamically check columns to support your 16-col model safely
+        num_cols = output.shape[-1] if output.ndim == 2 else 16
+        output = output.reshape(-1, num_cols)
 
         faces = []
         for det in output:
-            score = det[0]
+            # Your original model uses index 0 for the score
+            score = det[0] if num_cols == 16 else det[14]
+            
             if score < score_thresh:
                 continue
                 
-            # 2. Calculate coordinates in the 640x640 space
-            x1, y1, x2, y2 = det[2:6] * np.array([W, H, W, H], dtype=np.float32)
-            
-            # 3. REVERSE THE SCALE! (Map back to original image dimensions)
-            x1 /= scale
-            y1 /= scale
-            x2 /= scale
-            y2 /= scale
-            
-            w = x2 - x1
-            h = y2 - y1
-            
             face = np.zeros((1, 15), dtype=np.float32)
-            face[0, 0:4] = [x1, y1, w, h]
             
-            # 4. Reverse the scale for all 5 facial landmarks too
-            for n in range(5):
-                lm_x = det[6 + 2 * n] * W
-                lm_y = det[6 + 2 * n + 1] * H
-                face[0, 4 + 2 * n] = lm_x / scale
-                face[0, 4 + 2 * n + 1] = lm_y / scale
+            if num_cols == 16:
+                # --- YOUR ORIGINAL 16-COLUMN LOGIC ---
+                # 1. Un-normalize from inference size
+                x1 = det[2] * W
+                y1 = det[3] * H
+                x2 = det[4] * W
+                y2 = det[5] * H
                 
-            face[0, 14] = score
-            faces.append(face)
+                # 2. Reverse the scale to get original image coordinates
+                x1 /= scale
+                y1 /= scale
+                x2 /= scale
+                y2 /= scale
+                w, h = x2 - x1, y2 - y1
+
+                face[0, 0:4] = [x1, y1, w, h]
+                
+                for n in range(5):
+                    # Un-normalize and reverse scale in one step
+                    face[0, 4 + 2 * n] = (det[6 + 2 * n] * W) / scale
+                    face[0, 4 + 2 * n + 1] = (det[6 + 2 * n + 1] * H) / scale
+                    
+                face[0, 14] = score
+                faces.append(face)
+                
+            elif num_cols == 15:
+                # --- FALLBACK 15-COLUMN LOGIC (Just in case) ---
+                x, y, w, h = det[0:4] / scale
+                face[0, 0:4] = [x, y, w, h]
+                
+                for n in range(5):
+                    face[0, 4 + 2 * n] = det[4 + 2 * n] / scale
+                    face[0, 4 + 2 * n + 1] = det[5 + 2 * n] / scale
+                    
+                face[0, 14] = score
+                faces.append(face)
 
         if not faces:
             return np.zeros((0, 15), dtype=np.float32)
+            
         faces = np.vstack(faces)
 
         if faces.shape[0] > 1:
@@ -201,8 +196,6 @@ class YuNetDetector( BaseDetector, ONNXInference):
             faces = np.array([faces[i] for i in indices], dtype=np.float32)
             
         return faces
-
-    # dynamic-only alternate implementation removed; logic is now unified in prepare_input
     # ----------------------------
     # NMS helper
     # ----------------------------

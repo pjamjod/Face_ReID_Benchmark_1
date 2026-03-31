@@ -7,10 +7,12 @@ import numpy as np
 import onnxruntime as ort
 
 
-MODEL_DIR_CANDIDATES = [
+MODEL_ROOT_CANDIDATES = [
     os.path.join("models", "face_detection"),
-    os.path.join("models", "face_detection_models"),
+    os.path.join("models", "facedetection"),
 ]
+TARGET_PROVIDER = "DmlExecutionProvider"
+TARGET_LABEL = "DirectML"
 
 
 def _resolve_dim(dim, axis_index):
@@ -84,29 +86,29 @@ def _extract_node_provider_stats(profile_path):
             provider_to_ops[provider].add(op_name)
 
     total_nodes = len(node_to_provider)
-    cuda_nodes = sum(1 for p in node_to_provider.values() if p == "CUDAExecutionProvider")
+    target_nodes = sum(1 for p in node_to_provider.values() if p == TARGET_PROVIDER)
     cpu_nodes = sum(1 for p in node_to_provider.values() if p == "CPUExecutionProvider")
-    other_nodes = total_nodes - cuda_nodes - cpu_nodes
+    other_nodes = total_nodes - target_nodes - cpu_nodes
 
     total_ops = len(set(node_to_op.values()))
-    cuda_ops = len(provider_to_ops.get("CUDAExecutionProvider", set()))
+    target_ops = len(provider_to_ops.get(TARGET_PROVIDER, set()))
     cpu_ops = len(provider_to_ops.get("CPUExecutionProvider", set()))
 
     return {
         "total_nodes": total_nodes,
-        "cuda_nodes": cuda_nodes,
+        "target_nodes": target_nodes,
         "cpu_nodes": cpu_nodes,
         "other_nodes": other_nodes,
-        "cuda_node_pct": (cuda_nodes / total_nodes * 100.0) if total_nodes else 0.0,
+        "target_node_pct": (target_nodes / total_nodes * 100.0) if total_nodes else 0.0,
         "total_ops": total_ops,
-        "cuda_ops": cuda_ops,
+        "target_ops": target_ops,
         "cpu_ops": cpu_ops,
-        "cuda_provider_ops": sorted(provider_to_ops.get("CUDAExecutionProvider", set())),
+        "target_provider_ops": sorted(provider_to_ops.get(TARGET_PROVIDER, set())),
         "cpu_provider_ops": sorted(provider_to_ops.get("CPUExecutionProvider", set())),
     }
 
 
-def diagnose_model_cuda_support(model_path):
+def diagnose_model_directml_support(model_path):
     print(f"\nInspecting model: {model_path}")
     if not os.path.exists(model_path):
         print("  ERROR: model file not found")
@@ -116,15 +118,17 @@ def diagnose_model_cuda_support(model_path):
     so.enable_profiling = True
 
     providers = ort.get_available_providers()
-    if "CUDAExecutionProvider" not in providers:
-        print("  ERROR: CUDAExecutionProvider is not available in this ONNX Runtime build")
+    if TARGET_PROVIDER not in providers:
+        print(
+            f"  ERROR: {TARGET_PROVIDER} is not available. Install/use onnxruntime-directml and run on Windows."
+        )
         return None
 
     try:
         session = ort.InferenceSession(
             model_path,
             sess_options=so,
-            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            providers=[TARGET_PROVIDER, "CPUExecutionProvider"],
         )
     except Exception as ex:
         print(f"  ERROR: failed to create session: {ex}")
@@ -149,12 +153,12 @@ def diagnose_model_cuda_support(model_path):
         pass
 
     print(
-        "  Nodes -> total: {total_nodes}, CUDA: {cuda_nodes}, CPU fallback: {cpu_nodes}, other: {other_nodes}, CUDA%: {cuda_node_pct:.2f}".format(
+        "  Nodes -> total: {total_nodes}, DirectML: {target_nodes}, CPU fallback: {cpu_nodes}, other: {other_nodes}, DirectML%: {target_node_pct:.2f}".format(
             **stats
         )
     )
     print(
-        "  Ops   -> unique total: {total_ops}, CUDA ops: {cuda_ops}, CPU ops: {cpu_ops}".format(
+        "  Ops   -> unique total: {total_ops}, DirectML ops: {target_ops}, CPU ops: {cpu_ops}".format(
             **stats
         )
     )
@@ -162,33 +166,40 @@ def diagnose_model_cuda_support(model_path):
     return {"model_path": model_path, **stats}
 
 
-def list_onnx_models(model_dirs=None):
-    if model_dirs is None:
-        model_dirs = MODEL_DIR_CANDIDATES
+def _find_models_root():
+    for candidate in MODEL_ROOT_CANDIDATES:
+        if os.path.isdir(candidate):
+            return candidate
+    return None
 
-    paths = []
-    for model_dir in model_dirs:
-        if not os.path.isdir(model_dir):
-            continue
-        pattern = os.path.join(model_dir, "**", "*.onnx")
-        paths.extend(glob.glob(pattern, recursive=True))
 
-    # De-duplicate while preserving stable ordering
-    return sorted(set(paths))
+def list_onnx_models():
+    models_root = _find_models_root()
+    if models_root is None:
+        return [], None
+    pattern = os.path.join(models_root, "**", "*.onnx")
+    return sorted(glob.glob(pattern, recursive=True)), models_root
 
 
 def main():
-    models = list_onnx_models()
-    if not models:
-        joined_dirs = ", ".join(MODEL_DIR_CANDIDATES)
-        print(f"No ONNX model files found under: {joined_dirs}")
+    models, models_root = list_onnx_models()
+    if models_root is None:
+        print(
+            "No face-detection model folder found. Expected one of: "
+            + ", ".join(MODEL_ROOT_CANDIDATES)
+        )
         return
 
+    if not models:
+        print(f"No ONNX model files found under: {models_root}")
+        return
+
+    print(f"Using model folder: {models_root}")
     print(f"Found {len(models)} ONNX model(s). Running one profiled inference each...")
 
     rows = []
     for model_path in models:
-        result = diagnose_model_cuda_support(model_path)
+        result = diagnose_model_directml_support(model_path)
         if result is not None:
             rows.append(result)
 
@@ -196,17 +207,17 @@ def main():
         print("No model could be profiled successfully.")
         return
 
-    rows_sorted = sorted(rows, key=lambda x: x["cuda_node_pct"], reverse=True)
+    rows_sorted = sorted(rows, key=lambda x: x["target_node_pct"], reverse=True)
 
-    print("\nSummary (sorted by CUDA-supported node percentage):")
-    print("-" * 110)
+    print(f"\nSummary (sorted by {TARGET_LABEL}-supported node percentage):")
+    print("-" * 118)
     print(
-        f"{'Model':65} {'CUDA Nodes':>10} {'Total Nodes':>11} {'CUDA %':>8} {'CUDA Ops':>9} {'Total Ops':>9}"
+        f"{'Model':65} {'DML Nodes':>10} {'Total Nodes':>11} {'DML %':>8} {'DML Ops':>9} {'Total Ops':>9}"
     )
-    print("-" * 110)
+    print("-" * 118)
     for r in rows_sorted:
         print(
-            f"{r['model_path'][:65]:65} {r['cuda_nodes']:10d} {r['total_nodes']:11d} {r['cuda_node_pct']:8.2f} {r['cuda_ops']:9d} {r['total_ops']:9d}"
+            f"{r['model_path'][:65]:65} {r['target_nodes']:10d} {r['total_nodes']:11d} {r['target_node_pct']:8.2f} {r['target_ops']:9d} {r['total_ops']:9d}"
         )
 
 

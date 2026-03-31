@@ -61,13 +61,32 @@ class BaseDetector(ABC):
         inputs = {self.input_details["input_names"][0]: input_tensor}
         return self.session.run(self.output_details["output_names"], inputs)
     
-    #@timeit
     def detect(self, image: np.ndarray) -> np.ndarray:
-        """Run one-image detection using subclass hooks."""
+        """Run one-image detection using subclass hooks, recording phase times."""
+        import time
+        
+        # 1. Preprocess
+        t0 = time.perf_counter()
         blob = self.prepare_input(image)
+        
+        # 2. Inference
+        t1 = time.perf_counter()
         outputs = self.inference(blob)
-        return self.process_output(outputs)
+        
+        # 3. Postprocess
+        t2 = time.perf_counter()
+        faces = self.process_output(outputs)
+        t3 = time.perf_counter()
 
+        # Save timings (in milliseconds) for the benchmark script to collect
+        self.last_timings = {
+            "preprocess_ms": (t1 - t0) * 1000.0,
+            "inference_ms": (t2 - t1) * 1000.0,
+            "postprocess_ms": (t3 - t2) * 1000.0,
+            "total_ms": (t3 - t0) * 1000.0
+        }
+        
+        return faces
     # ------------------------------------------------------------------
     # Shared helpers
     # ------------------------------------------------------------------

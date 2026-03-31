@@ -174,13 +174,28 @@ if __name__ == "__main__":
         },
         {
             "name": "YuNet",
-            "path": 'models/face_detection/face_detection_yunet_2023mar.onnx',
-            "fixed_shape": {}
+            "path": 'models/face_detection/face_detection_yunet_2023mar_raven.onnx',
+            "fixed_shape": {'input': (1, 3, 640, 640)}
         },
         {
             "name": "scrfd10gkps",
             "path": 'models/face_detection/scrfd10gkps.onnx',
             "fixed_shape": {'input.1': (1, 3, 640, 640)}
+        },
+        {
+            "name": "scrfd10gkps",
+            "path": 'models/face_detection/scrfd10g.onnx',
+            "fixed_shape": {'input.1': (1, 3, 640, 640)}
+        },
+        {
+            "name": "scrfd2.5gkps",
+            "path": 'models/face_detection/scrfd2.5gkps.onnx',
+            "fixed_shape": {'input.1': (1, 3, 640, 640)}
+        },
+        {
+            "name": "retinaface_resnet50",
+            "path": 'models/face_detection/retinaface-resnet50.onnx',
+            "fixed_shape": {'input': (1, 3, 640, 640)}
         },
         {
             "name": "mobilenetv2arcface",

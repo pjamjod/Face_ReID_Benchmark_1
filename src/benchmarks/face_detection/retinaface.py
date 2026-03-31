@@ -76,7 +76,9 @@ class RetinaFaceDetector(BaseDetector):
             )
         
         self.input_details["input_names"] = [i.name for i in self.session.get_inputs()]
+        self.input_details["input_shapes"] = [list(i.shape) for i in self.session.get_inputs()]
         self.output_details["output_names"] = [o.name for o in self.session.get_outputs()]
+        self.output_details["output_shapes"] = [list(o.shape) for o in self.session.get_outputs()]
 
         # Detect model input metadata (used only when input mode is not explicitly forced)
         input_shape = self.session.get_inputs()[0].shape
@@ -182,7 +184,7 @@ class RetinaFaceDetector(BaseDetector):
         scores = conf_t[:, 1].cpu().numpy()
 
         # 5. Ignore Low Scores
-        conf_thresh = self.params.get("confidence_threshold", 0.5)
+        conf_thresh = self.params.get("score_threshold", 0.02)
         inds = np.where(scores > conf_thresh)[0]
         
         if len(inds) == 0:

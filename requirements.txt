@@ -2,6 +2,9 @@
 numpy
 opencv-python
 scipy
+pandas
+matplotlib
+seaborn
 
 # --- ONNX & PyTorch (CUDA GPU Versions) ---
 # Install CUDA-matched PyTorch wheels from https://pytorch.org/get-started/locally/

@@ -1,4 +1,4 @@
-tensorflow0==2.8.0
+tensorflow==2.8.0
 keras_cv_attention_models
 glob2
 pandas

@@ -91,12 +91,13 @@ class SCRFDDetector(BaseDetector, ONNXInference):
     def get_input_details(self):
         model_inputs = self.session.get_inputs()
         self.input_details["input_names"] = [i.name for i in model_inputs]
+        self.input_details["input_shapes"] = [i.shape for i in model_inputs]
         self.input_name = model_inputs[0].name
 
     def get_output_details(self):
         model_outputs = self.session.get_outputs()
         self.output_details["output_names"] = [o.name for o in model_outputs]
-
+        self.output_details["output_shapes"] = [o.shape for o in model_outputs]
     def prepare_input(self, image: np.ndarray):
         """Handle resizing and padding while maintaining aspect ratio (from nn.py)."""
         input_size = self.params.get("input_size", (640, 640))
@@ -126,7 +127,7 @@ class SCRFDDetector(BaseDetector, ONNXInference):
 
     def process_output(self, net_outs: list):
         """Decode multi-level FPN outputs."""
-        score_thresh = float(self.params.get("score_threshold", 0.5))
+        score_thresh = float(self.params.get("score_threshold", 0.3))
         nms_thresh = float(self.params.get("nms_threshold", 0.4))
         
         scores_list = []

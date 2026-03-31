@@ -23,13 +23,12 @@ datasets/widerface/
 datasets/cplfw
 submodule/
 # Benchmark output and logs
-src/benchmarks/results/widerface_preds_featherface/
-src/benchmarks/results/widerface_preds_scrfd_640x640/
-src/benchmarks/results/widerface_preds_yunet_dynamic/
-src/benchmarks/results/widerface_preds_yunet_640x640/
+src/benchmarks/results
+
 
 src/benchmarks/face_recognition/ghostfacenet_arch/.venv_ghost/
 # Specific file types to ignore everywhere
 *.onnx
 *.csv
 *.zip
+*.txt

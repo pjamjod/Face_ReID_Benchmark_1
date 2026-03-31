@@ -15,7 +15,7 @@ import onnxruntime as ort
 
 from face_detection.scrfd import SCRFDDetector
 from face_detection.yunet import YuNetDetector
-from face_detection.featherface import RetinaFaceDetector
+from face_detection.retinaface import RetinaFaceDetector
 
 # 1. Get Project Root
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,12 +41,7 @@ _BASE = {"score_threshold": 0.5, "nms_threshold": 0.4, "divisor": 32}
 # model_file     : path relative to project root
 # params         : full params dict passed to the detector
 MODELS = [
-    {
-        "label":      "scrfd_640x640",
-        "cls":        SCRFDDetector,
-        "model_file": "models/face_detection/scrfd10gkps.onnx",
-        "params":     {**_BASE, "dynamic_input": False, "input_size": (640, 640)},
-    },
+
     {
         "label":      "yunet_dynamic",
         "cls":        YuNetDetector,
@@ -59,14 +54,19 @@ MODELS = [
         "model_file": "models/face_detection/face_detection_yunet_2023mar_raven.onnx",
         "params":     {**_BASE, "dynamic_input": False, "input_size": (640, 640)},
     },
-
+    {
+        "label":      "scrfd_640x640",
+        "cls":        SCRFDDetector,
+        "model_file": "models/face_detection/scrfd10gkps.onnx",
+        "params":     {**_BASE, "dynamic_input": False, "input_size": (640, 640)},
+    },
 
 ]
 
 
 WIDER_VAL_DIR = "datasets/widerface/WIDER_val/images"
 GT_DIR        = "datasets/widerface/wider_face_eval_tools/eval_tools/ground_truth"
-RESULTS_ROOT  = "src/benchmarks/results"
+RESULTS_ROOT  = "src/benchmarks/results_directml"
 METRICS_JSON  = os.path.join(RESULTS_ROOT, "widerface_eval.json")
 EVAL_TXT      = os.path.join(RESULTS_ROOT, "widerface_eval.txt")
 
@@ -181,15 +181,6 @@ def save_widerface_results(detector, image_path, save_path):
     return inference_time_ms, len(faces)
 
 
-def parse_eval_output(eval_output):
-    """Extract Easy/Medium/Hard AP values from WiderFace eval stdout."""
-    scores = {}
-    for line in eval_output.splitlines():
-        m = re.search(r"(Easy|Medium|Hard)\s+Val\s+AP:\s*([0-9.]+)", line)
-        if m:
-            key = m.group(1).lower()
-            scores[key] = float(m.group(2)) * 100.0
-    return scores
 
 
 def compute_timing_metrics(times_ms, det_counts):
@@ -288,7 +279,8 @@ def run_single_model(model_cfg, device_id):
     print(f"  Running WiderFace evaluation...")
     eval_buf = io.StringIO()
     with contextlib.redirect_stdout(eval_buf):
-        evaluation(pred_dir, GT_DIR)
+        # Capture the new return values here
+        aps, precisions, recalls = evaluation(pred_dir, GT_DIR)
     eval_output = eval_buf.getvalue()
     print(eval_output)  # echo to terminal
 
@@ -297,7 +289,6 @@ def run_single_model(model_cfg, device_id):
         ef.write(eval_output)
         ef.write("\n")
 
-    ap_scores = parse_eval_output(eval_output)
     timing_metrics = compute_timing_metrics(inf_times_ms, det_counts)
 
     return {
@@ -312,10 +303,17 @@ def run_single_model(model_cfg, device_id):
         "runtime": onnx_runtime,
         "timing": timing_metrics,
         "ap": {
-            "easy": ap_scores.get("easy", None),
-            "medium": ap_scores.get("medium", None),
-            "hard": ap_scores.get("hard", None),
+            # Multiply by 100 to match your previous parsing logic
+            "easy": aps[0] * 100.0,
+            "medium": aps[1] * 100.0,
+            "hard": aps[2] * 100.0,
         },
+        "curves": {
+            # Convert numpy arrays to standard lists for JSON serialization
+            "easy":   {"precision": precisions[0].tolist(), "recall": recalls[0].tolist()},
+            "medium": {"precision": precisions[1].tolist(), "recall": recalls[1].tolist()},
+            "hard":   {"precision": precisions[2].tolist(), "recall": recalls[2].tolist()}
+        }
     }
 
 
